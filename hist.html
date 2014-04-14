@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<title>Document</title>
+</head>
+<body>
+
+<div id="histogram"></div>
+
+<script>
+var width = 800,
+		height = 500,
+		padding = 30,
+		bar_height = 20;
+		name_width = 120;
+
+
+d3.json('ages.json',function (data) {
+
+	var year = 2002;
+	buildHistogram(data,year,"#histogram");
+
+});
+
+function buildHistogram(data,year,selector) {
+	var svg = d3.select(selector).append("svg")
+	.attr("width",width+name_width)
+	.attr("height",height)
+	.attr("class",'histogram');
+
+	var male_arr = data[year].male,
+			female_arr = data[year].female,
+			ages = data[year].age;
+
+	var x_male = d3.scale.linear()
+		.domain([0, d3.max(male_arr)])
+		.range([0,width/2]);
+
+	var y_male = d3.scale.ordinal()
+		.domain(male_arr)
+		.rangeBands([30,height]);
+
+	var x_female = d3.scale.linear()
+		.domain([0, d3.max(female_arr)])
+		.range([0,width/2]);
+
+	var y_female = d3.scale.ordinal()
+		.domain(female_arr)
+		.rangeBands([30,height]);
+
+	var label = d3.scale.ordinal()
+		.domain(ages)
+		.rangeBands([30,height]);
+
+	// male female label
+	svg.append("text")
+		.attr("x",name_width+width*2/3)
+		.attr("y",20)
+		.attr("text-anchor","middle")
+		.text("Male")
+		.style("fill","black");
+	svg.append("text")
+		.attr("x",width/3)
+		.attr("y",20)
+		.attr("text-anchor","middle")
+		.text("Female")
+		.style("fill","black");
+
+	// male histogram
+	svg.selectAll("rect.male")
+		.data(male_arr).enter()
+		.append("rect")
+		.attr("x",name_width+width/2)
+		.attr("y",y_male)
+		.attr("width",x_male)
+		.attr("height",y_male.rangeBand())
+		.attr("class","male")
+		.style("stroke","white")
+		.style("fill","skyblue");
+
+	// male population
+	svg.selectAll("text.pops_male")
+		.data(male_arr).enter()
+		.append("text")
+		.attr("x",function(d){ return x_male(d) + name_width + width/2; })
+		.attr("y",function(d){ return y_male(d) + y_male.rangeBand()/2; })
+		.attr("dx",-5)
+		.attr("dy",".36em")
+		.attr("text-anchor","end")
+		.attr("class","pops_male")
+		.text(String)
+		.style("fill","white");
+
+	// age labels
+	svg.selectAll("text.ages")
+		.data(ages).enter()
+		.append("text")
+		.attr("x",name_width/2+width/2)
+		.attr("y",function(d){ return label(d) + label.rangeBand()/2; })
+		.attr("dy",".36em")
+		.attr("class","ages")
+		.attr("text-anchor","middle")
+		.text(String)
+		.style("stroke","black");
+
+	// female histogram
+	svg.selectAll("rect.female")
+		.data(female_arr).enter()
+		.append("rect")
+		.attr("transform","translate("+width/2+") scale(-1,1)")
+		.attr("x",0)
+		.attr("y",y_female)
+		.attr("width",x_female)
+		.attr("height",y_female.rangeBand())
+		.attr("class","female")
+		.style("stroke","white")
+		.style("fill","violet");
+
+	// female population
+	svg.selectAll("text.pops_fem")
+		.data(female_arr).enter()
+		.append("text")
+		.attr("x",function(d){ return width/2-x_female(d); })
+		.attr("y",function(d){ return y_female(d) + y_female.rangeBand()/2; })
+		.attr("dx",5)
+		.attr("dy",".36em")
+		.attr("text-anchor","start")
+		.attr("class","pops_fem")
+		.text(String)
+		.style("fill","white");
+
+}
+
+</script>
+
+</body>
+</html>

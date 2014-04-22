@@ -3,6 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<style>
+	input[type='range'] {
+		    -webkit-appearance: none;
+    background-color: #57a3ff;
+    height: 15px;
+    width: 170px;
+    border-radius: 5px;
+    box-shadow: inset 1px 1px 3px rgba(0,0,0,0.6);
+	}
+
+#year-tooltip {
+    display: block;
+    position: relative;
+    width: 40px;
+    height: 20px;
+    padding: 5px;
+    background: #474747;
+    border-radius: 10px;
+    text-align: center;
+    color: white;
+    font-family: helvetica, arial;
+    font-weight: bold;
+    top: 10px;
+    left: 14px;
+}
+#year-tooltip:after {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 15px;
+    border-style: solid;
+    border-width: 0px 10px 10px;
+    border-color: #474747 transparent;
+    display:block;
+    width: 0;
+    z-index: 1;
+}
+
+
+</style>
 
 <title>Document</title>
 </head>
@@ -34,6 +74,9 @@ d3.select("#year-slider").attr("value",year).on("change",function(){
 	d3.select("#year-tooltip").text(year);
 	d3.select("#histogram").select("svg").remove();
 	buildHistogram(dat,year,"#histogram");
+
+	var width = parseInt(d3.select("input[type=range]").style('width'));
+	d3.select("#year-tooltip").style("left",width*(year-2000)/11-15 +"px");
 });
 
 

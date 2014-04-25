@@ -7,6 +7,19 @@
 <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
 
 <style>
+#legend {
+    padding: 1.5em 0 0 1.5em;
+}
+
+li.key {
+    border-top-width: 15px;
+    border-top-style: solid;
+    font-size: .75em;
+    width: 10%;
+    padding-left: 0;
+    padding-right: 0;
+}
+
 input[type='range'] {
   -webkit-appearance: none;
   background-color: #57a3ff;
@@ -56,7 +69,9 @@ input[type='range'] {
 <input type="range" id="year-slider" min="2000" max="2010" step="1" value="2002">
 <div id="year-tooltip"></div>
 
+<div id="legend"></div>
 <div id="usmap"></div>
+<div id="canvas"></div>
 
 <script>
 var width = 800,
@@ -220,16 +235,39 @@ function buildHistogram(data,year,selector) {
 							 
 			//Define quantize scale to sort data values into buckets of color
 			var color = d3.scale.quantize()
-							.range(colorbrewer.Blues[9]);	//.range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
-								//Colors taken from colorbrewer.js, included in the D3 download
+							.range(colorbrewer.Blues[9]);	
+							//Colors taken from colorbrewer.js, included in the D3 download
 
 			//Create SVG element
 			var svg = d3.select("#usmap")
 						.append("svg")
 						.attr("width", w)
 						.attr("height", h);
+						
+			svg.append("rect")
+				.attr("class", "background")
+				.attr("width", width)
+				.attr("height", height)
+				.on("click", clicked)
+				.style("fill","white");
+				
+			//create the legend for the map
+			/*var legend = d3.select('#legend')
+				.append('ul')
+				.attr('class', 'list-inline');
 
-			//Load in agriculture data
+			var keys = legend.selectAll('li.key')
+					.data(color.range());
+
+			keys.enter().append('li')
+					.attr('class', 'key')
+					.style('border-top-color', String)
+					.text(function(d) {
+							var r = color.invertExtent(d);
+							return r[0];
+					});*/
+
+			//Load in state population data
 			d3.json("statepop.json", function(data) {
 				usdat = data;
 				buildMap(usdat,year,"#map");
@@ -242,6 +280,10 @@ function buildHistogram(data,year,selector) {
 			// 	d3.select("#map").select("svg").remove();
 			// 	buildMap(dat,year,"#map");
 			// });
+			
+			var stateData = {};
+			var stPopulations = [];
+			
 			
 			function buildMap(data,year,selector) {
 				var states = [];
@@ -259,7 +301,7 @@ function buildHistogram(data,year,selector) {
 
 				//Load in GeoJSON data
 				d3.json("us-states.json", function(json) {
-
+					stPopulations = [];
 					//Merge the population data and GeoJSON
 					//Loop through once for each population value
 					for (var i = 0; i < yearPop.length; i++) {
@@ -278,6 +320,8 @@ function buildHistogram(data,year,selector) {
 							if (dataState == jsonState) {
 								//Copy the data value into the JSON
 								json.features[j].properties.value = dataValue;
+								stateData[""+dataState] = dataValue;
+								stPopulations.push(dataValue);
 								
 								//Stop looking through the JSON
 								break;
@@ -304,11 +348,227 @@ function buildHistogram(data,year,selector) {
 					   			//If value is undefined…
 						   		return "#ccc";
 					   		}
-					   });
+					   })
+						 .on("click", clicked);
 			
 				});
 			}
 			
+			var centered;
+			
+			//function that handles clicking on map
+			function clicked(d) {
+				if(d && centered != d){
+					//clear before drawing new animation
+					svgA.selectAll("text").remove();
+					deleteAlotofPeople(1);
+					
+					var stPop = stateData[""+d.properties.name];
+					var popScale = d3.scale.linear()
+					.domain([d3.min(stPopulations), d3.max(stPopulations)])
+					.range([2,70]);
+					createAlotofPeople(popScale(stPop));
+					//console.log(""+d.properties.name);
+					centered = d;
+				} else{
+					deleteAlotofPeople(1);
+					svgA.selectAll("text").remove();
+					centered = null;
+				}
+				
+				svg.selectAll("path")
+					.classed("active", centered && function(d) { return d === centered; });
+				
+				//write more detail about the state that was clicked on
+				if(centered){
+					var pop = stateData[""+d.properties.name];
+					svgA.append("text")
+						.attr("x", side+20)
+						.attr("y", 40)
+						.attr("font-size","40px")
+						.attr("stroke","black")
+						.attr("fill",color(Math.log(d.properties.value)))
+						.text(""+d.properties.name);
+					svgA.append("text")
+						.attr("x", side+20)
+						.attr("y", 80)
+						.text("The population here in "+year+" was: "+pop+" million");
+				}
+				
+			}
+			
+			//Code for the animations
+			var height = 600;
+			var width = 600;
+			var side = 300;
+			var anix = 10;
+			var aniy = 10;
+			var svgA = d3.select("#canvas").append("svg").attr("height", height).attr("width", width);
+			var peoplearray = [];
+			var headarray = [];
+			var limbsarray = [];
+
+			var radius = 3;
+			var rectangle = svgA.append("rect")
+				.attr("x", anix)
+				.attr("y", aniy)
+				.attr("width", side)
+				.attr("height", side)
+				.attr("stroke-width",5)
+				.attr("fill-opacity",.5);
+			var createPerson = function(x,y) {
+				var head = svgA.append("circle")
+					.attr("cx", x)
+					.attr("cy", y)
+					.attr("r", radius);
+					headarray.push(head);
+
+					var limb1 = svgA.append("line")
+					.attr("x1", x)
+					.attr("y1", y+radius)
+					.attr("x2", x)
+					.attr("y2", y+radius*4)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black");
+					limbsarray.push(limb1);
+
+					var limb2 = svgA.append("line")
+					.attr("x1", x)
+					.attr("y1", y+radius*4)
+					.attr("x2", x-radius)
+					.attr("y2", y+radius*8)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black");
+					limbsarray.push(limb2);
+
+					var limb3 = svgA.append("line")
+					.attr("x1", x)
+					.attr("y1", y+radius*4)
+					.attr("x2", x+radius)
+					.attr("y2", y+radius*8)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black");
+					limbsarray.push(limb3);
+
+					var limb4 = svgA.append("line")
+					.attr("x1", x)
+					.attr("y1", y+radius*2.5)
+					.attr("x2", x+radius*2)
+					.attr("y2", y+radius)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black");
+					limbsarray.push(limb4);
+
+
+					var limb5 = svgA.append("line")
+					.attr("x1", x)
+					.attr("y1", y+radius*2.5)
+					.attr("x2", x-radius*2)
+					.attr("y2", y+radius)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black");
+					limbsarray.push(limb5);
+			};
+
+			var movePerson = function(x,y,person) {
+					headarray[person].transition()
+					.attr("cx", x)
+					.attr("cy", y);
+
+				limbsarray[person*5].transition()
+					.attr("x1", x)
+					.attr("y1", y+radius)
+					.attr("x2", x)
+					.attr("y2", y+radius*4);
+
+					limbsarray[person*5+1].transition()
+					.attr("x1", x)
+					.attr("y1", y+radius*4)
+					.attr("x2", x-radius)
+					.attr("y2", y+radius*8);
+
+					limbsarray[person*5+2].transition()
+					.attr("x1", x)
+					.attr("y1", y+radius*4)
+					.attr("x2", x+radius)
+					.attr("y2", y+radius*8);
+
+					limbsarray[person*5+3].transition()
+					.attr("x1", x)
+					.attr("y1", y+radius*2.5)
+					.attr("x2", x+radius*2)
+					.attr("y2", y+radius);
+
+
+					limbsarray[person*5+4].transition()
+					.attr("x1", x)
+					.attr("y1", y+radius*2.5)
+					.attr("x2", x-radius*2)
+					.attr("y2", y+radius);
+			};
+			var actPerson = function(person) {
+				var rand =Math.random();
+				var rand2 =Math.random();
+				var movex=0;
+				var movey=0;
+				if(rand <.5)
+					movex=5;
+				else
+					movex=-5;
+
+				if(rand2 <.5)
+					movey=5;
+				else
+					movey=-5;
+				var tempx = Number(headarray[person].attr("cx"))+movex;
+				var tempy = Number(headarray[person].attr("cy"))+movey;
+					if(tempx > anix+side-3*radius)
+							tempx=tempx-2*5;
+					if(tempx<anix+3*radius)
+							tempx=tempx+2*5;
+					if(tempy > aniy+side-9*radius)
+							tempy=tempy-2*5;
+					if(tempy<aniy+2*radius)
+							tempy=tempy+2*5;
+				movePerson(tempx,tempy,person);
+			};
+			var createAlotofPeople = function(number) {
+					var total =number+peoplearray.length;
+					for(var i =peoplearray.length;i<total;i++)
+					{
+							var rand1 =Math.floor((Math.random()*(400-6*radius)));
+							var rand2 =Math.floor((Math.random()*(400-11*radius)));
+							createPerson(anix+3*radius+rand1,aniy+2*radius+rand2);
+							myTimer(i);
+					}
+
+			}
+			function myTimer(item)
+					{peoplearray.push(setInterval(function(){actPerson(Number(item))}, 100));}
+			function myTimer2(item)
+					{clearInterval(peoplearray[item]);}
+
+			var stopAlotofPeople = function (d){
+					for(var i=0;i<peoplearray.length;i++)
+					{
+							//console.log(peoplearray[i]);
+							myTimer2(i);
+					}
+			}
+			var deleteAlotofPeople = function(d){
+					stopAlotofPeople();
+					for(var i=headarray.length-1;i>=0;i--)
+					{
+							headarray[i].remove();
+							headarray.pop();
+							peoplearray.pop();
+					}
+					for(var i=limbsarray.length-1;i>=0;i--)
+					{
+							limbsarray[i].remove();
+							limbsarray.pop();
+					}
+			}
 			
 		</script>
 </body>

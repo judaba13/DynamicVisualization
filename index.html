@@ -7,18 +7,6 @@
 <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
 
 <style>
-/*#legend {
-    padding: 1.5em 0 0 1.5em;
-}
-
-li.key {
-    border-top-width: 15px;
-    border-top-style: solid;
-    font-size: .75em;
-    width: 10%;
-    padding-left: 0;
-    padding-right: 0;
-}*/
 
 .legend {
   font-size: 12px;
@@ -48,7 +36,7 @@ input[type='range'] {
     font-family: helvetica, arial;
     font-weight: bold;
     top: 10px;
-    left: 185px;
+    left: -15px;
 }
 #year-tooltip:after {
     content: "";
@@ -72,7 +60,7 @@ input[type='range'] {
 <h1>United States Resident Population by Sex and Age</h1>
 <h3>(in millions of people)</h3>
 <div id="histogram"></div>
-<input type="range" id="year-slider" min="2000" max="2010" step="1" value="2002">
+<input type="range" id="year-slider" min="2000" max="2010" step="1" value="2000">
 <div id="year-tooltip"></div>
 
 <h1>United States Resident Population by State</h1>
@@ -86,7 +74,7 @@ var width = 800,
 		padding = 30,
 		bar_height = 20,
 		name_width = 120,
-		year = 2002,
+		year = 2000,
 		dat;
 
 d3.json('ages.json',function (data) {
